@@ -205,7 +205,7 @@ impl GlobalStatePhase5 {
         bad_signers_vec.sort();
         bad_signers_vec.dedup();
         let err_type = ErrorType {
-            error_type: "phase6_blame".to_string(),
+            error_type: "phase5_blame".to_string(),
             bad_actors: bad_signers_vec,
         };
         Err(err_type)

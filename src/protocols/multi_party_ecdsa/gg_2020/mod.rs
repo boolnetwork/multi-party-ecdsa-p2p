@@ -25,3 +25,13 @@ pub struct ErrorType {
     error_type: String,
     bad_actors: Vec<usize>,
 }
+
+impl ErrorType {
+    pub fn get_type(&self) -> String {
+        self.error_type.clone()
+    }
+
+    pub fn get_bad_actors(&self) -> Vec<usize> {
+        self.bad_actors.clone()
+    }
+}

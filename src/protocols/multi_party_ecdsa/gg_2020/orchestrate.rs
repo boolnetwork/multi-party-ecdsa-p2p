@@ -49,6 +49,7 @@ use crate::utilities::mta::{MessageA, MessageB};
 use crate::Error;
 use curv::cryptographic_primitives::proofs::sigma_dlog::DLogProof;
 use curv::cryptographic_primitives::secret_sharing::feldman_vss::VerifiableSS;
+use curv::cryptographic_primitives::proofs::sigma_correct_homomorphic_elgamal_enc::*;
 use curv::{FE, GE};
 use paillier::*;
 use serde::{Deserialize, Serialize};
@@ -308,7 +309,7 @@ pub struct SignStage2Input {
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SignStage2Result {
-    pub gamma_i_vec: Vec<(MessageB, FE)>,
+    pub gamma_i_vec: Vec<(MessageB, FE, BigInt, BigInt)>,   // TODO: phase5 blame
     pub w_i_vec: Vec<(MessageB, FE)>,
 }
 // This API will carry our the MtA for gamma_i MtAwc(Check happens later in stage3) for w_i
@@ -318,7 +319,7 @@ pub fn sign_stage2(input: &SignStage2Input) -> Result<SignStage2Result, ErrorTyp
     let mut res_w_i = vec![];
     for j in 0..input.l_ttag - 1 {
         let ind = if j < input.index { j } else { j + 1 };
-        let (m_b_gamma, beta_gamma, _beta_randomness, _beta_tag) = MessageB::b(
+        let (m_b_gamma, beta_gamma, beta_randomness, beta_tag) = MessageB::b(
             &input.gamma_i,
             &input.ek_vec[input.l_s[ind]],
             input.m_a_vec[ind].clone(),
@@ -326,7 +327,7 @@ pub fn sign_stage2(input: &SignStage2Input) -> Result<SignStage2Result, ErrorTyp
         // beta_gamma is  secret value and needs to be encrypted with a key only know to party ind.
         // See gg20_sign_client.rs for a demo of how this value is encrypted using a key shared
         // between party input.index and party ind.
-        res_gamma_i.push((m_b_gamma, beta_gamma));
+        res_gamma_i.push((m_b_gamma, beta_gamma, beta_randomness, beta_tag));
         let (m_b_w, beta_wi, _beta_randomness, _beta_tag) = MessageB::b(
             &input.w_i,
             &input.ek_vec[input.l_s[ind]],
@@ -345,7 +346,7 @@ pub fn sign_stage2(input: &SignStage2Input) -> Result<SignStage2Result, ErrorTyp
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SignStage3Result {
     pub alpha_vec_gamma: Vec<FE>,
-    pub alpha_vec_w: Vec<FE>,
+    pub alpha_vec_w: Vec<(FE, BigInt)>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SignStage3Input {
@@ -357,19 +358,38 @@ pub struct SignStage3Input {
     pub index_s: usize,
     pub ttag_s: usize,
 }
-pub fn sign_stage3(input: &SignStage3Input) -> Result<SignStage3Result, Error> {
+pub fn sign_stage3(input: &SignStage3Input) -> Result<SignStage3Result, ErrorType> {
     let mut res_alpha_vec_gamma = vec![];
     let mut res_alpha_vec_w = vec![];
     for i in 0..input.ttag_s - 1 {
         let ind = if i < input.index_s { i } else { i + 1 };
-        let res = input.m_b_gamma_s[i].verify_proofs_get_alpha(&input.dk_s, &input.k_i_s)?;
-        res_alpha_vec_gamma.push(res.0);
-        let res = input.m_b_w_s[i].verify_proofs_get_alpha(&input.dk_s, &input.k_i_s)?;
-        if input.g_w_i_s[ind] != input.m_b_w_s[i].b_proof.pk {
-            println!("MtAwc did not work i = {} ind ={}", i, ind);
-            return Err(Error::InvalidCom);
+        let res = input.m_b_gamma_s[i].verify_proofs_get_alpha(&input.dk_s, &input.k_i_s);
+        if let Err(err) = res {
+            return Err(ErrorType {
+                error_type: format!("{:?}", err),
+                bad_actors: vec![i],
+            });
         }
-        res_alpha_vec_w.push(res.0);
+        let res = res.unwrap();
+        res_alpha_vec_gamma.push(res.0);
+        let res = input.m_b_w_s[i].verify_proofs_get_alpha(&input.dk_s, &input.k_i_s);
+        if let Err(err) = res {
+            return Err(ErrorType {
+                error_type: format!("{:?}", err),
+                bad_actors: vec![i],
+            });
+        }
+        let res = res.unwrap();
+        if input.g_w_i_s[ind] != input.m_b_w_s[i].b_proof.pk {
+            // println!("MtAwc did not work i = {} ind ={}", i, ind);
+            // return Err(Error::InvalidCom);  // TODO
+            return Err(ErrorType {
+                error_type: format!("Error Type: {:?}, MtAwc did not work i = {} ind ={}",
+                    Error::InvalidCom, i, ind),
+                bad_actors: vec![i],
+            });
+        }
+        res_alpha_vec_w.push(res);
     }
     Ok(SignStage3Result {
         alpha_vec_gamma: res_alpha_vec_gamma,
@@ -426,10 +446,10 @@ pub fn sign_stage5(input: &SignStage5Input) -> Result<SignStage5Result, ErrorTyp
         input.decom_vec1.clone(),
         &input.bc1_vec,
         input.index,
-    );
+    );  // return R
     if let Err(err) = check_Rvec_i {
         println!("Error->{:?}", &err);
-        return Err(err);
+        return Err(err);    // TODO
     }
 
     let Rvec_i = check_Rvec_i.unwrap();
@@ -439,8 +459,35 @@ pub fn sign_stage5(input: &SignStage5Input) -> Result<SignStage5Result, ErrorTyp
         R_dash: Rdash_vec_i,
     })
 }
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SignStage6Input {
+    pub R: GE,
+    pub sigma_i: FE,
+    pub T_i: GE,
+    pub l_i: FE,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SignStage6Result {
+    pub S_i: GE,
+    pub proof: HomoELGamalProof,
+}
+pub fn sign_stage6(input: &SignStage6Input) -> Result<SignStage6Result, ErrorType> {
+    let (S, proof) = LocalSignature::
+        phase6_compute_S_i_and_proof_of_consistency(
+            &input.R, 
+            &input.T_i, 
+            &input.sigma_i, 
+            &input.l_i
+        );
+    Ok(SignStage6Result {
+            S_i: S,
+            proof: proof,
+    })
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SignStage7Input {
     pub R_dash_vec: Vec<GE>,
     pub R: GE,
     pub m_a: MessageA,
@@ -455,13 +502,18 @@ pub struct SignStage6Input {
     pub message_bn: BigInt,
     pub sigma: FE,
     pub ysum: GE,
+    // TODO: for phase 6 check
+    pub S_vec: Vec<GE>,
+    pub homo_elgamal_proof_vec: Vec<HomoELGamalProof>,
+    pub R_vec: Vec<GE>,
+    pub T_vec: Vec<GE>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SignStage6Result {
+pub struct SignStage7Result {
     pub local_sig: LocalSignature,
 }
-pub fn sign_stage6(input: &SignStage6Input) -> Result<SignStage6Result, ErrorType> {
+pub fn sign_stage7(input: &SignStage7Input) -> Result<SignStage7Result, ErrorType> {
     let mut proof_vec = vec![];
     for j in 0..input.s.len() - 1 {
         let ind = if j < input.index { j } else { j + 1 };
@@ -495,11 +547,32 @@ pub fn sign_stage6(input: &SignStage6Input) -> Result<SignStage6Result, ErrorTyp
     let phase5_check = LocalSignature::phase5_check_R_dash_sum(&input.R_dash_vec);
     if phase5_check.is_err() {
         return Err(ErrorType {
+            // TODO: blame
             error_type: format!("phase5 R_dash_sum check failed {:?}", phase5_check),
             bad_actors: vec![],
         });
     }
-    Ok(SignStage6Result {
+    // TODO: phase 6 check
+    let phase6_verify_zk = LocalSignature::phase6_verify_proof(
+        &input.S_vec, 
+        &input.homo_elgamal_proof_vec, 
+        &input.R_vec, 
+        &input.T_vec
+    );
+    if phase6_verify_zk.is_err() {
+        return Err(phase5_verify_zk.err().unwrap());
+    }
+
+    let phase6_check = LocalSignature::phase6_check_S_i_sum(&input.ysum, &input.S_vec);
+    if phase6_check.is_err() {
+        // TODO: blame
+        return Err(ErrorType {
+            error_type: format!("phase6 S_i sum check failed {:?}", phase6_check),
+            bad_actors: vec![],
+        });
+    }
+
+    Ok(SignStage7Result {
         local_sig: LocalSignature::phase7_local_sig(
             &input.sign_key.k_i,
             &input.message_bn,
@@ -510,18 +583,19 @@ pub fn sign_stage6(input: &SignStage6Input) -> Result<SignStage6Result, ErrorTyp
     })
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SignStage7Input {
+pub struct SignStage8Input {
     pub local_sig_vec: Vec<LocalSignature>,
     pub ysum: GE,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SignStage7Result {
+pub struct SignStage8Result {
     pub local_sig: SignatureRecid,
 }
-pub fn sign_stage7(input: &SignStage7Input) -> Result<SignStage7Result, ErrorType> {
+pub fn sign_stage8(input: &SignStage8Input) -> Result<SignStage8Result, ErrorType> {
     let s_vec: Vec<FE> = input.local_sig_vec.iter().map(|a| a.s_i).collect();
     let res_sig = input.local_sig_vec[0].output_signature(&s_vec[1..]);
     if res_sig.is_err() {
+        // TODO: blame
         println!("error in combining sigs {:?}", res_sig.unwrap_err());
         return Err(ErrorType {
             error_type: "error in combining signatures".to_string(),
@@ -534,7 +608,7 @@ pub fn sign_stage7(input: &SignStage7Input) -> Result<SignStage7Result, ErrorTyp
         .iter()
         .for_each(|a| check_sig(&sig.r, &sig.s, &a.m, &input.ysum));
 
-    Ok(SignStage7Result { local_sig: sig })
+    Ok(SignStage8Result { local_sig: sig })
 }
 pub fn check_sig(r: &FE, s: &FE, msg: &BigInt, pk: &GE) {
     use secp256k1::{verify, Message, PublicKey, PublicKeyFormat, Signature};
@@ -1134,7 +1208,7 @@ mod tests {
 
         let mut res_stage6_vec = vec![];
         for i in 0..ttag {
-            let input = SignStage6Input {
+            let input = SignStage7Input {
                 R_dash_vec: R_dash_vec.clone(),
                 R: R_vec[i].clone(),
                 m_a: m_a_vec[i].0.clone(),
@@ -1157,7 +1231,7 @@ mod tests {
                 serde_json::to_string_pretty(&input).unwrap()
             );
 
-            let res = sign_stage6(&input)?;
+            let res = sign_stage7(&input)?;
             write_output!(
                 i as u16,
                 6,
@@ -1171,14 +1245,14 @@ mod tests {
         let local_sig_vec_l: Vec<LocalSignature> =
             res_stage6_vec.iter().map(|a| a.local_sig.clone()).collect();
 
-        let input = SignStage7Input {
+        let input = SignStage8Input {
             local_sig_vec: local_sig_vec_l.clone(),
             ysum: keypair_result.y_sum.clone(),
         };
         //Each party needs to run it
         let mut sigs_vec = vec![];
         for _ in 0..ttag {
-            sigs_vec.push(sign_stage7(&input)?);
+            sigs_vec.push(sign_stage8(&input)?);
         }
         Ok(())
     }

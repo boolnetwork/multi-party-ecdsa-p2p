@@ -12,13 +12,8 @@ use curv::{
 };
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::{mpsc, RwLock, Arc};
 
 pub type Key = String;
-
-#[allow(dead_code)]
-pub const AES_KEY_BYTES_LEN: usize = 32;
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct AEAD {
@@ -72,7 +67,7 @@ pub fn aes_decrypt(key: &[u8], aead_pack: AEAD) -> Vec<u8> {
     gcm.decrypt(&aead_pack.ciphertext[..], &mut out, &aead_pack.tag[..]);
     out
 }
-#[allow(dead_code)]
+
 pub fn postb<T>(client: &Client, path: &str, body: T) -> Option<String>
 where
     T: serde::ser::Serialize,
@@ -95,7 +90,7 @@ where
     }
     None
 }
-#[allow(dead_code)]
+
 pub fn broadcast(
     client: &Client,
     party_num: u16,
@@ -112,7 +107,7 @@ pub fn broadcast(
     let res_body = postb(&client, "set", entry).unwrap();
     serde_json::from_str(&res_body).unwrap()
 }
-#[allow(dead_code)]
+
 pub fn sendp2p(
     client: &Client,
     party_from: u16,
@@ -131,7 +126,7 @@ pub fn sendp2p(
     let res_body = postb(&client, "set", entry).unwrap();
     serde_json::from_str(&res_body).unwrap()
 }
-#[allow(dead_code)]
+
 pub fn poll_for_broadcasts(
     client: &Client,
     party_num: u16,
@@ -160,7 +155,7 @@ pub fn poll_for_broadcasts(
     }
     ans_vec
 }
-#[allow(dead_code)]
+
 pub fn poll_for_p2p(
     client: &Client,
     party_num: u16,
@@ -184,93 +179,6 @@ pub fn poll_for_p2p(
                     println!("[{:?}] party {:?} => party {:?}", round, i, party_num);
                     break;
                 }
-            }
-        }
-    }
-    ans_vec
-}
-#[allow(dead_code)]
-pub fn broadcast_ch(
-    tx: &mpsc::Sender<String>,
-    party_num_int: u16,
-    round: &str,
-    data: String
-) {
-    let key = format!("{}-{}", party_num_int, round);
-    let entry: Entry = Entry{
-        key,
-        value: data,
-    };
-    let data = serde_json::to_string(&entry).unwrap();
-    assert!(tx.send(data).is_ok());
-}
-#[allow(dead_code)]
-pub fn sendp2p_ch(
-    tx: &mpsc::Sender<String>,
-    party_from: u16,
-    party_to: u16,
-    round: &str,
-    data: String
-) {
-    let key = format!("{}-{}-{}", party_from, party_to, round);
-    let entry: Entry = Entry{
-        key,
-        value: data,
-    };
-    let data = serde_json::to_string(&entry).unwrap();
-    assert!(tx.send(data).is_ok());
-}
-#[allow(dead_code)]
-pub fn poll_for_broadcasts_ch(
-    db_mtx: &Arc<RwLock<HashMap<Key, String>>>,
-    party_num: u16,
-    n: u16,
-    delay: Duration,
-    round: &str
-) -> Vec<String> {
-    let mut ans_vec: Vec<String> = Vec::new();
-    for i in 1..=n {
-        if i != party_num {
-            let key = format!("{}-{}", i, round);
-            loop {
-                {
-                    let db = (**db_mtx).read().unwrap();
-                    if let Some(data) = db.get(&key) {
-                        let da: String = (*data).clone().to_string();
-                        ans_vec.push(da);
-                        println!("[{:?}] party {:?} => party {:?}", round, i, party_num);
-                        break;
-                    }
-                }
-                thread::sleep(delay);
-            }
-        }
-    }
-    ans_vec
-}
-#[allow(dead_code)]
-pub fn poll_for_p2p_ch(
-    db_mtx: &Arc<RwLock<HashMap<Key, String>>>,
-    party_num: u16,
-    n: u16,
-    delay: Duration,
-    round: &str
-) -> Vec<String> {
-    let mut ans_vec: Vec<String> = Vec::new();
-    for i in 1..=n {
-        if i != party_num {
-            let key = format!("{}-{}-{}", i, party_num, round);
-            loop {
-                {
-                    let db = (**db_mtx).read().unwrap();
-                    if let Some(data) = db.get(&key) {
-                        let da: String = (*data).clone().to_string();
-                        ans_vec.push(da);
-                        println!("[{:?}] party {:?} => party {:?}", round, i, party_num);
-                        break;
-                    }
-                }
-                thread::sleep(delay);
             }
         }
     }
@@ -306,22 +214,4 @@ pub fn check_sig(r: &FE, s: &FE, msg: &BigInt, pk: &GE) {
 
     let is_correct = verify(&msg, &secp_sig, &pk);
     assert!(is_correct);
-}
-#[allow(dead_code)]
-pub fn get_party_num(map: &HashMap<Vec<u8>, Vec<u8>>, id: &Vec<u8>) -> u16 {
-    let mut res: u16 = 1;
-    for vv in (*map).clone().values() {
-        if compare_id(id, &vv) {
-            res += 1;
-        }
-    }
-    res
-}
-#[allow(dead_code)]
-fn compare_id(myid: &Vec<u8>, otid: &Vec<u8>) -> bool {
-    for i in 0..(*myid).len() {
-        if (*myid)[i] < (*otid)[i] { return false; }
-        else if (*myid)[i] > (*otid)[i] { return true; }
-    }
-    false
 }

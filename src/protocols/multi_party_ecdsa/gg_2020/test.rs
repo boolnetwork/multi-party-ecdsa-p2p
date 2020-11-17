@@ -525,7 +525,7 @@ fn sign(
             // compose beta tag vector:
             let mut beta_tag_vec_to_test = Vec::new();
             let mut beta_randomness_vec_to_test = Vec::new();
-            for j in 0..ttag - 1 {
+            for j in 0..ttag - 1 {  // P_i 发出的所有的beta相关信息
                 let ind1 = if j < i { j } else { j + 1 };
                 let ind2 = if j < i { i - 1 } else { i };
                 beta_tag_vec_to_test.push(beta_tag_vec_all[ind1][ind2].clone());
