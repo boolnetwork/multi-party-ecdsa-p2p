@@ -17,10 +17,11 @@
 pub mod blame;
 pub mod orchestrate;
 pub mod party_i;
+use serde::{Deserialize, Serialize};
 #[cfg(test)]
 mod test;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct ErrorType {
     error_type: String,
     bad_actors: Vec<usize>,
