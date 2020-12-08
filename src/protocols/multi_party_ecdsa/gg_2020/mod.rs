@@ -23,6 +23,31 @@ mod test;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct ErrorType {
-    pub error_type: String,
-    pub bad_actors: Vec<usize>,
+    error_type: String,
+    bad_actors: Vec<usize>,
+}
+
+impl ErrorType {
+    pub fn new(error_type: String, bad_actors: Vec<usize>) -> Self {
+        ErrorType {
+            error_type,
+            bad_actors
+        }
+    }
+
+    pub fn error_type(&self) -> String {
+        self.error_type.clone()
+    }
+
+    pub fn bad_actors(&self) -> Vec<usize> {
+        self.bad_actors.clone()
+    }
+
+    pub fn set_error_type(&mut self, error_type: String) {
+        self.error_type = error_type;
+    }
+
+    pub fn set_bad_actores(&mut self, bad_actors: Vec<usize>) {
+        self.bad_actors = bad_actors;
+    }
 }
