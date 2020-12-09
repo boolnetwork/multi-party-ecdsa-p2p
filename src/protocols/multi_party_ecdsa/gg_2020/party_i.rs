@@ -250,7 +250,7 @@ impl Keys {
                         .verify(&bc1_vec[i].dlog_statement)
                         .is_ok();
                 if test_res == false {
-                    bad_actors_vec.push(i);
+                    bad_actors_vec.push(i+1);
                     false
                 } else {
                     true
@@ -295,7 +295,7 @@ impl Keys {
                     .is_ok()
                     && vss_scheme_vec[i].commitments[0].get_element() == y_vec[i].get_element();
                 if res == false {
-                    bad_actors_vec.push(i);
+                    bad_actors_vec.push(i+1);
                     false
                 } else {
                     true
@@ -359,7 +359,7 @@ impl Keys {
             .map(|i| {
                 let ver_res = DLogProof::verify(&dlog_proofs_vec[i]).is_ok();
                 if ver_res == false {
-                    bad_actors_vec.push(i);
+                    bad_actors_vec.push(i+1);
                     false
                 } else {
                     true
@@ -650,7 +650,7 @@ impl LocalSignature {
                 };
                 let ver_res = pdl_w_slack_proof_vec[j].verify(&pdl_w_slack_statement);
                 if ver_res.is_err() {
-                    bad_actors_vec.push(i);
+                    bad_actors_vec.push(i+1);
                     false
                 } else {
                     true
@@ -718,7 +718,7 @@ impl LocalSignature {
             };
             if proof_vec[i].verify(&delta).is_err() {
                 verify_proofs = false;
-                bad_actors_vec.push(i);
+                bad_actors_vec.push(i+1);
             };
         }
 
