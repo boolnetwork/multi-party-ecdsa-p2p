@@ -17,6 +17,7 @@
 pub mod blame;
 pub mod orchestrate;
 pub mod party_i;
+pub mod orchestrate_blame;
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 mod test;
