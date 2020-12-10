@@ -238,7 +238,7 @@ impl Keys {
         assert_eq!(decom_vec.len() as u16, params.share_count);
         assert_eq!(bc1_vec.len() as u16, params.share_count);
         // test paillier correct key, h1,h2 correct generation and test decommitments
-        let correct_key_correct_decom_all = (0..bc1_vec.len())
+        let _correct_key_correct_decom_all = (0..bc1_vec.len())
             .map(|i| {
                 let test_res = HashCommitment::create_commitment_with_user_defined_randomness(
                     &decom_vec[i].y_i.bytes_compressed_to_big_int(),
@@ -286,7 +286,7 @@ impl Keys {
         assert_eq!(secret_shares_vec.len() as u16, params.share_count);
         assert_eq!(vss_scheme_vec.len() as u16, params.share_count);
 
-        let correct_ss_verify = (0..y_vec.len())
+        let _correct_ss_verify = (0..y_vec.len())
             .map(|i| {
                 let res = vss_scheme_vec[i]
                     .validate_share(&secret_shares_vec[i], index)
@@ -351,7 +351,7 @@ impl Keys {
         let mut bad_actors_vec = Vec::new();
         assert_eq!(y_vec.len() as u16, params.share_count);
         assert_eq!(dlog_proofs_vec.len() as u16, params.share_count);
-        let xi_dlog_verify = (0..y_vec.len())
+        let _xi_dlog_verify = (0..y_vec.len())
             .map(|i| {
                 let ver_res = DLogProof::verify(&dlog_proofs_vec[i]).is_ok();
                 if ver_res == false {
@@ -545,7 +545,7 @@ impl SignKeys {
         index: usize,
     ) -> Result<GE, ErrorType> {
         let mut bad_actors_vec = Vec::new();
-        let test_b_vec_and_com = (0..b_proof_vec.len())
+        let _test_b_vec_and_com = (0..b_proof_vec.len())
             .map(|j| {
                 let ind = if j < index { j } else { j + 1 };
                 let res = b_proof_vec[j].pk.get_element()
@@ -627,7 +627,7 @@ impl LocalSignature {
     ) -> Result<(), ErrorType> {
         let mut bad_actors_vec = Vec::new();
 
-        let proofs_verification = (0..pdl_w_slack_proof_vec.len())
+        let _proofs_verification = (0..pdl_w_slack_proof_vec.len())
             .map(|j| {
                 let ind = if j < i { j } else { j + 1 };
                 let pdl_w_slack_statement = PDLwSlackStatement {

@@ -559,7 +559,7 @@ pub fn sign_stage7(input: &SignStage7Input) -> Result<SignStage7Result, ErrorTyp
         &input.T_vec
     );
     if phase6_verify_zk.is_err() {
-        return Err(phase5_verify_zk.err().unwrap());
+        return Err(phase6_verify_zk.err().unwrap());
     }
 
     let phase6_check = LocalSignature::phase6_check_S_i_sum(&input.ysum, &input.S_vec);
