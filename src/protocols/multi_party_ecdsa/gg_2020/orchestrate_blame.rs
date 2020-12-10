@@ -367,7 +367,7 @@ pub fn sign_stage3(input: &SignStage3Input) -> Result<SignStage3Result, ErrorTyp
         if let Err(err) = res {
             return Err(ErrorType {
                 error_type: format!("{:?}", err),
-                bad_actors: vec![i],
+                bad_actors: vec![ind+1],
             });
         }
         let res = res.unwrap();
@@ -376,7 +376,7 @@ pub fn sign_stage3(input: &SignStage3Input) -> Result<SignStage3Result, ErrorTyp
         if let Err(err) = res {
             return Err(ErrorType {
                 error_type: format!("{:?}", err),
-                bad_actors: vec![i],
+                bad_actors: vec![ind+1],
             });
         }
         let res = res.unwrap();
@@ -386,7 +386,7 @@ pub fn sign_stage3(input: &SignStage3Input) -> Result<SignStage3Result, ErrorTyp
             return Err(ErrorType {
                 error_type: format!("Error Type: {:?}, MtAwc did not work i = {} ind ={}",
                     Error::InvalidCom, i, ind),
-                bad_actors: vec![i],
+                bad_actors: vec![ind+1],
             });
         }
         res_alpha_vec_w.push(res);
