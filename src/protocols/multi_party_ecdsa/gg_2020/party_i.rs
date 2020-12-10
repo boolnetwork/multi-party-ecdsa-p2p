@@ -251,16 +251,14 @@ impl Keys {
                         .is_ok();
                 if test_res == false {
                     bad_actors_vec.push(i+1);
-                    false
-                } else {
-                    true
                 }
+                true
             })
             .all(|x| x);
 
         let err_type = ErrorType {
             error_type: "invalid key".to_string(),
-            bad_actors: bad_actors_vec,
+            bad_actors: bad_actors_vec.clone(),
         };
 
         let (vss_scheme, secret_shares) = VerifiableSS::share(
@@ -268,7 +266,7 @@ impl Keys {
             params.share_count as usize,
             &self.u_i,
         );
-        if correct_key_correct_decom_all {
+        if bad_actors_vec.len() == 0 {
             Ok((vss_scheme, secret_shares, self.party_index))
         } else {
             Err(err_type)
@@ -296,19 +294,17 @@ impl Keys {
                     && vss_scheme_vec[i].commitments[0].get_element() == y_vec[i].get_element();
                 if res == false {
                     bad_actors_vec.push(i+1);
-                    false
-                } else {
-                    true
                 }
+                true
             })
             .all(|x| x);
 
         let err_type = ErrorType {
             error_type: "invalid vss".to_string(),
-            bad_actors: bad_actors_vec,
+            bad_actors: bad_actors_vec.clone(),
         };
 
-        if correct_ss_verify {
+        if bad_actors_vec.len() == 0 {
             let (head, tail) = y_vec.split_at(1);
             let y = tail.iter().fold(head[0], |acc, x| acc + x);
 
@@ -360,19 +356,17 @@ impl Keys {
                 let ver_res = DLogProof::verify(&dlog_proofs_vec[i]).is_ok();
                 if ver_res == false {
                     bad_actors_vec.push(i+1);
-                    false
-                } else {
-                    true
                 }
+                true
             })
             .all(|x| x);
 
         let err_type = ErrorType {
             error_type: "bad dlog proof".to_string(),
-            bad_actors: bad_actors_vec,
+            bad_actors: bad_actors_vec.clone(),
         };
 
-        if xi_dlog_verify {
+        if bad_actors_vec.len() == 0 {
             Ok(())
         } else {
             Err(err_type)
@@ -563,13 +557,10 @@ impl SignKeys {
                         &phase1_decommit_vec[ind].blind_factor,
                     ) == bc1_vec[ind].com;
                 if res == false {
-                    bad_actors_vec.push(j);
-                    false
-                } else {
-                    true
+                    bad_actors_vec.push(ind+1);
                 }
-            })
-            .all(|x| x);
+                true
+            }).all(|x| x);
 
         let mut g_gamma_i_iter = phase1_decommit_vec.iter();
         let head = g_gamma_i_iter.next().unwrap();
@@ -577,10 +568,10 @@ impl SignKeys {
 
         let err_type = ErrorType {
             error_type: "bad gamma_i decommit".to_string(),
-            bad_actors: bad_actors_vec,
+            bad_actors: bad_actors_vec.clone(),
         };
 
-        if test_b_vec_and_com {
+        if bad_actors_vec.len() == 0 {
             Ok({
                 let gamma_sum = tail.fold(head.g_gamma_i, |acc, x| acc + x.g_gamma_i);
                 // R
@@ -651,18 +642,16 @@ impl LocalSignature {
                 let ver_res = pdl_w_slack_proof_vec[j].verify(&pdl_w_slack_statement);
                 if ver_res.is_err() {
                     bad_actors_vec.push(i+1);
-                    false
-                } else {
-                    true
                 }
+                true
             })
             .all(|x| x);
 
         let err_type = ErrorType {
             error_type: "bad gamma_i decommit".to_string(),
-            bad_actors: bad_actors_vec,
+            bad_actors: bad_actors_vec.clone(),
         };
-        if proofs_verification {
+        if bad_actors_vec.len() == 0 {
             Ok(())
         } else {
             Err(err_type)

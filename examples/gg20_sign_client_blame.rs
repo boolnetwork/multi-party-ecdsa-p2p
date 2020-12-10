@@ -587,7 +587,7 @@ fn main() -> Result<(), ErrorType> {
                     .map(|i| decom1_vec[i].g_gamma_i)
                     .collect::<Vec<GE>>();
                 let mut m_b_gamma_vec_all = vec![];
-                for i in 1..THRESHOLD+1 {
+                for i in 1..THRESHOLD+2 {
                     let m_b_gamma_vec = poll_for_p2p(
                             &client, 
                             i, 
@@ -680,7 +680,7 @@ fn main() -> Result<(), ErrorType> {
                     ek_vec.push(keypair.paillier_key_vec_s[signers_vec[i as usize]].clone());
                 }
                 let mut m_b_w_vec_all = vec![];
-                for i in 1..THRESHOLD+1 {
+                for i in 1..THRESHOLD+2 {
                     let m_b_w_vec = poll_for_p2p(
                         &client, 
                         i, 

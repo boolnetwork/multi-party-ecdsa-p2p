@@ -448,7 +448,6 @@ pub fn sign_stage5(input: &SignStage5Input) -> Result<SignStage5Result, ErrorTyp
         input.index,
     );  // return R
     if let Err(err) = check_Rvec_i {
-        println!("Error->{:?}", &err);
         return Err(err);    // TODO
     }
 
@@ -548,7 +547,7 @@ pub fn sign_stage7(input: &SignStage7Input) -> Result<SignStage7Result, ErrorTyp
     if phase5_check.is_err() {
         return Err(ErrorType {
             // TODO: blame
-            error_type: format!("phase5 R_dash_sum check failed {:?}", phase5_check),
+            error_type: format!("phase5 R_dash_sum check failed {:?}", phase5_check.unwrap_err()),
             bad_actors: vec![],
         });
     }
