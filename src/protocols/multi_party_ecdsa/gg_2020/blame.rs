@@ -16,6 +16,8 @@
 */
 use crate::protocols::multi_party_ecdsa::gg_2020::ErrorType;
 use crate::utilities::mta::{MessageA, MessageB};
+use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
+use curv::cryptographic_primitives::hashing::traits::Hash;
 use curv::cryptographic_primitives::proofs::sigma_ec_ddh::ECDDHProof;
 use curv::cryptographic_primitives::proofs::sigma_ec_ddh::ECDDHStatement;
 use curv::cryptographic_primitives::proofs::sigma_ec_ddh::ECDDHWitness;
@@ -121,6 +123,7 @@ impl GlobalStatePhase5 {
         // check commitment to g_gamma
         for i in 0..len {
             if self.g_gamma_vec[i] != GE::generator() * self.gamma_vec[i] {
+                println!("gamma compute error ******************");
                 bad_signers_vec.push(i)
             }
         }
@@ -199,6 +202,7 @@ impl GlobalStatePhase5 {
 
         for i in 0..len {
             if self.delta_vec[i] != delta_vec_reconstruct[i] {
+                println!("delta incorrect****************");
                 bad_signers_vec.push(i)
             }
         }
@@ -234,6 +238,22 @@ pub struct GlobalStatePhase6 {
     pub S_vec: Vec<GE>,
     pub m_a_vec: Vec<MessageA>,
     pub m_b_mat: Vec<Vec<MessageB>>,
+}
+
+pub fn verify(a: &ECDDHProof, delta: &ECDDHStatement) -> bool {
+    let e = HSha256::create_hash_from_ge(&[
+        &delta.g1, &delta.h1, &delta.g2, &delta.h2, &a.a1, &a.a2,
+    ]);
+    let z_g1 = delta.g1 * a.z;
+    let z_g2 = delta.g2 * a.z;
+    let a1_plus_e_h1 = a.a1 + delta.h1 * e;
+    let a2_plus_e_h2 = a.a2 + delta.h2 * e;
+    if z_g1 == a1_plus_e_h1 && z_g2 == a2_plus_e_h2 {
+        true
+    } else {
+        println!("g's correct: {:?}, R's correct: {:?}***************", z_g1 == a1_plus_e_h1, z_g2 == a2_plus_e_h2);
+        false
+    }
 }
 
 impl GlobalStatePhase6 {
@@ -304,7 +324,7 @@ impl GlobalStatePhase6 {
         }
     }
 
-    pub fn phase6_blame(&self, R: &GE) -> Result<(), ErrorType> {
+    pub fn phase6_blame(&self, R: &GE, sigma_i: &FE) -> Result<(), ErrorType> {
         let len = self.k_vec.len();
         let mut bad_signers_vec = Vec::new();
 
@@ -368,9 +388,12 @@ impl GlobalStatePhase6 {
                 h1: g_sigma_i_vec[i],
                 h2: self.S_vec[i],
             };
+            let correct_g_sigma_i = statement.g1 * sigma_i;
+            // println!("sigma correct {:?}**********", correct_g_sigma_i == statement.h1);
 
-            let result = self.proof_vec[i].verify(&statement);
-            if result.is_err() {
+            let result = verify(&self.proof_vec[i], &statement);
+            if !result {
+                // println!("{:?} proof error*******************", i);
                 bad_signers_vec.push(i)
             }
         }
@@ -400,14 +423,14 @@ impl GlobalStatePhase7 {
         let len = self.s_vec.len(); //TODO: check bounds
         let mut bad_signers_vec = Vec::new();
 
-        for i in 1..len {
+        for i in 0..len {
             let R_si = self.R * &self.s_vec[i];
             let R_dash_m = self.R_dash_vec[i] * &ECScalar::from(&self.m);
             let Si_r = self.S_vec[i] * &self.r;
             let right = R_dash_m + Si_r;
             let left = R_si;
             if left != right {
-                bad_signers_vec.push(i);
+                bad_signers_vec.push(i+1);
             }
         }
 

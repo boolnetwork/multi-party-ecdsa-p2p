@@ -566,7 +566,7 @@ pub fn sign_stage7(input: &SignStage7Input) -> Result<SignStage7Result, ErrorTyp
     if phase6_check.is_err() {
         // TODO: blame
         return Err(ErrorType {
-            error_type: format!("phase6 S_i sum check failed {:?}", phase6_check),
+            error_type: format!("phase6 S_i sum check failed {:?}", phase6_check.unwrap_err()),
             bad_actors: vec![],
         });
     }
@@ -595,7 +595,6 @@ pub fn sign_stage8(input: &SignStage8Input) -> Result<SignStage8Result, ErrorTyp
     let res_sig = input.local_sig_vec[0].output_signature(&s_vec[1..]);
     if res_sig.is_err() {
         // TODO: blame
-        println!("error in combining sigs {:?}", res_sig.unwrap_err());
         return Err(ErrorType {
             error_type: "error in combining signatures".to_string(),
             bad_actors: vec![],

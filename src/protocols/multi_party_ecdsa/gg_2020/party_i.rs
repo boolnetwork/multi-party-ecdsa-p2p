@@ -641,7 +641,7 @@ impl LocalSignature {
                 };
                 let ver_res = pdl_w_slack_proof_vec[j].verify(&pdl_w_slack_statement);
                 if ver_res.is_err() {
-                    bad_actors_vec.push(i+1);
+                    bad_actors_vec.push(j+1);
                 }
                 true
             })
