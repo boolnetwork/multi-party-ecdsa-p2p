@@ -708,7 +708,7 @@ fn main() -> Result<(), ErrorType> {
                     m_b_w_vec_all,
                     &local_state_vec[..],
                 );
-                let bad_actors = global_state.phase6_blame(&res_stage5.R, &res_stage4.sigma_i).expect_err("No Bad Actors Found");
+                let bad_actors = global_state.phase6_blame(&res_stage5.R).expect_err("No Bad Actors Found");
                 return Err(bad_actors);
             },
             _ => unreachable!("Unknown error in sign_stage7 {:?}", err)
