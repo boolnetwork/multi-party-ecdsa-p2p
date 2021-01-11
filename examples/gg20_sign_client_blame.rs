@@ -28,6 +28,7 @@ use common::{
     aes_decrypt, aes_encrypt, broadcast, poll_for_broadcasts, poll_for_p2p, postb, sendp2p, Params,
     PartySignup, AEAD,
 };
+use crate::common::AES_KEY_BYTES_LEN;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct ParamsFile {
@@ -208,6 +209,7 @@ fn main() -> Result<(), ErrorType> {
 
     // generate message B for P_j to P_i in MtAwc :{ proof of b/beta_tag, and c_B, which called as gamma_i or w_i }
     let res_stage2 = sign_stage2(&input_stage2).expect("sign stage2 failed.");
+   
     // Send out MessageB, beta, ni to other signers so that they can calculate there alpha values.
     let mut j = 0;
     for i in 1..THRESHOLD + 2 {
@@ -335,8 +337,8 @@ fn main() -> Result<(), ErrorType> {
         "round3",
         uuid.clone(),
     );
-    let mut alpha_vec = vec![];
-    let mut miu_vec = vec![];
+    let mut alpha_vec: Vec<FE> = vec![];
+    let mut miu_vec: Vec<FE> = vec![];
     for i in 0..THRESHOLD {
         let (l_alpha_enc, l_miu_enc): (AEAD, AEAD) =
             serde_json::from_str(&round3_ans_vec[i as usize]).unwrap();
@@ -349,11 +351,33 @@ fn main() -> Result<(), ErrorType> {
         miu_vec.push(ECScalar::from(&bn));
     }
 
+    // TODO: 合并
+    let delta_alpha_vec = res_stage3.alpha_vec_gamma.clone();
+
+    let delta_beta_vec = (0..res_stage2.gamma_i_vec.len())
+        .map(|i| {
+            res_stage2.gamma_i_vec[i].1.clone()
+        }).collect::<Vec<FE>>();
+
+    let sigma_miu_vec = (0..res_stage3.alpha_vec_w.len())
+        .map(|i| {
+            res_stage3.alpha_vec_w[i].0.clone()
+        }).collect::<Vec<FE>>();
+    
+    let sigma_ni_vec = (0..res_stage2.w_i_vec.len())
+        .map(|i| {
+            res_stage2.w_i_vec[i].1.clone()
+        }).collect::<Vec<FE>>();
+
     let input_stage4 = SignStage4Input {
-        alpha_vec_s: alpha_vec.clone(),
-        beta_vec_s: beta_vec.clone(),
-        miu_vec_s: miu_vec.clone(),
-        ni_vec_s: ni_vec.clone(),
+        // alpha_vec_s: alpha_vec.clone(),
+        alpha_vec_s: delta_alpha_vec.clone(),
+        // beta_vec_s: beta_vec.clone(),
+        beta_vec_s: delta_beta_vec.clone(),
+        // miu_vec_s: miu_vec.clone(),
+        miu_vec_s: sigma_miu_vec.clone(),
+        // ni_vec_s: ni_vec.clone(),
+        ni_vec_s: sigma_ni_vec.clone(),
         sign_keys_s: res_stage1.sign_keys.clone(),
     };
 
@@ -425,7 +449,8 @@ fn main() -> Result<(), ErrorType> {
     };
 
     // generate R and \overline{R}_i
-    let res_stage5 = sign_stage5(&input_stage5)?;
+    let mut res_stage5 = sign_stage5(&input_stage5)?;
+    
     assert!(broadcast(
         &client,
         party_num_int,
@@ -526,13 +551,6 @@ fn main() -> Result<(), ErrorType> {
         T_vec: T_vec.clone(),
     };
 
-    // check the consistency between R_i and E_i(k_i)
-    // check the production of \overline{R}_i is equal with g 
-    // TODO: check the production of S_i is equal wiht y_sum
-    // return with local signature s_i
-
-    // let res_stage7 = sign_stage7(&input_stage7).expect("stage7 sign failed.");
-
     // TODO: phase 5 error blame
     // generate local state for each party
     let res_stage7 = sign_stage7(&input_stage7);
@@ -554,6 +572,7 @@ fn main() -> Result<(), ErrorType> {
                     beta_tag: beta_tag_blame,
                     encryption_key: keypair.party_keys_s.ek.clone(),
                 };
+                println!("num: {:?} start first blame broadcast", party_num_int);
                 assert!(broadcast(
                     &client,
                     party_num_int,
@@ -708,7 +727,7 @@ fn main() -> Result<(), ErrorType> {
                     m_b_w_vec_all,
                     &local_state_vec[..],
                 );
-                let bad_actors = global_state.phase6_blame(&res_stage5.R, &res_stage4.sigma_i).expect_err("No Bad Actors Found");
+                let bad_actors = global_state.phase6_blame(&res_stage5.R).expect_err("No Bad Actors Found");
                 return Err(bad_actors);
             },
             _ => unreachable!("Unknown error in sign_stage7 {:?}", err)

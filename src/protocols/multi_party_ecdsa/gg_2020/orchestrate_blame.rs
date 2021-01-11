@@ -358,38 +358,51 @@ pub struct SignStage3Input {
     pub index_s: usize,
     pub ttag_s: usize,
 }
+// TODO: 合并
 pub fn sign_stage3(input: &SignStage3Input) -> Result<SignStage3Result, ErrorType> {
     let mut res_alpha_vec_gamma = vec![];
     let mut res_alpha_vec_w = vec![];
+    let mut bad_actors_vec = vec![];
     for i in 0..input.ttag_s - 1 {
         let ind = if i < input.index_s { i } else { i + 1 };
         let res = input.m_b_gamma_s[i].verify_proofs_get_alpha(&input.dk_s, &input.k_i_s);
-        if let Err(err) = res {
-            return Err(ErrorType {
-                error_type: format!("{:?}", err),
-                bad_actors: vec![ind+1],
-            });
+        if let Err(_err) = res {
+            // return Err(ErrorType {
+            //     error_type: format!("{:?}", err),
+            //     bad_actors: vec![ind+1],
+            // });
+            bad_actors_vec.push(ind+1);
         }
         let res = res.unwrap();
         res_alpha_vec_gamma.push(res.0);
         let res = input.m_b_w_s[i].verify_proofs_get_alpha(&input.dk_s, &input.k_i_s);
-        if let Err(err) = res {
-            return Err(ErrorType {
-                error_type: format!("{:?}", err),
-                bad_actors: vec![ind+1],
-            });
+        if let Err(_err) = res {
+            // return Err(ErrorType {
+            //     error_type: format!("{:?}", err),
+            //     bad_actors: vec![ind+1],
+            // });
+            bad_actors_vec.push(ind+1);
         }
         let res = res.unwrap();
         if input.g_w_i_s[ind] != input.m_b_w_s[i].b_proof.pk {
             // println!("MtAwc did not work i = {} ind ={}", i, ind);
             // return Err(Error::InvalidCom);  // TODO
-            return Err(ErrorType {
-                error_type: format!("Error Type: {:?}, MtAwc did not work i = {} ind ={}",
-                    Error::InvalidCom, i, ind),
-                bad_actors: vec![ind+1],
-            });
+            // return Err(ErrorType {
+            //     error_type: format!("Error Type: {:?}, MtAwc did not work i = {} ind ={}",
+            //         Error::InvalidCom, i, ind),
+            //     bad_actors: vec![ind+1],
+            // });
+            bad_actors_vec.push(ind+1);
         }
         res_alpha_vec_w.push(res);
+    }
+    if !bad_actors_vec.is_empty() {
+        bad_actors_vec.sort();
+        bad_actors_vec.dedup();
+        return Err(ErrorType {
+            error_type: format!("sign_stage3 error"),
+            bad_actors: bad_actors_vec,
+        });
     }
     Ok(SignStage3Result {
         alpha_vec_gamma: res_alpha_vec_gamma,

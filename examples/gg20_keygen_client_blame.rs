@@ -21,6 +21,7 @@ use common::{
     aes_decrypt, aes_encrypt, broadcast, poll_for_broadcasts, poll_for_p2p, postb, sendp2p, Params,
     PartySignup, AEAD,
 };
+use crate::common::AES_KEY_BYTES_LEN;
 
 impl From<Params> for Parameters {
     fn from(item: Params) -> Self {

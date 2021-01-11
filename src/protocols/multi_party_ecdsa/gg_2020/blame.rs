@@ -324,7 +324,7 @@ impl GlobalStatePhase6 {
         }
     }
 
-    pub fn phase6_blame(&self, R: &GE, sigma_i: &FE) -> Result<(), ErrorType> {
+    pub fn phase6_blame(&self, R: &GE) -> Result<(), ErrorType> {
         let len = self.k_vec.len();
         let mut bad_signers_vec = Vec::new();
 
@@ -388,12 +388,8 @@ impl GlobalStatePhase6 {
                 h1: g_sigma_i_vec[i],
                 h2: self.S_vec[i],
             };
-            let correct_g_sigma_i = statement.g1 * sigma_i;
-            // println!("sigma correct {:?}**********", correct_g_sigma_i == statement.h1);
-
             let result = verify(&self.proof_vec[i], &statement);
             if !result {
-                // println!("{:?} proof error*******************", i);
                 bad_signers_vec.push(i)
             }
         }

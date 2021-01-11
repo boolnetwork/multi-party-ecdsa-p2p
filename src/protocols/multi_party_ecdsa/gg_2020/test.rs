@@ -144,7 +144,8 @@ fn test_sign_n2_t1_ttag1_corrupt_step7_party2() {
 #[test]
 fn test_sign_n5_t2_ttag4_corrupt_step7_party24() {
     let res = sign(2, 5, 4, vec![0, 2, 3, 4], 7, &[1, 3]);
-    assert!(&res.err().unwrap().bad_actors[..] == &[1, 3])
+    let a = res.err().unwrap();
+    assert!(&a.bad_actors[..] == &[2, 4])
 }
 
 fn keygen_t_n_parties(
@@ -581,6 +582,7 @@ fn sign(
 
     LocalSignature::phase6_verify_proof(&S_vec, &homo_elgamal_proof_vec, &R_vec, &T_vec)?;
 
+    // p6 check
     let phase6_check = LocalSignature::phase6_check_S_i_sum(&y, &S_vec);
     if phase6_check.is_err() {
         // initiate phase 6 blame protocol to learn which parties acted maliciously.
